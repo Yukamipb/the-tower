@@ -58,6 +58,7 @@ class GameState:
         self.enemies = []
         self.projectiles = []
         self.particles = []
+        self.floating_texts = []
         self.game_over = False
         self.paused = False
         self.last_shot = 0
@@ -240,6 +241,33 @@ class Particle:
         
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(self.size))
+
+# ── FLOATING TEXT ───────────────────────────────────────
+class FloatingText:
+    def __init__(self, x, y, text, color, size=20):
+        self.x, self.y = x, y
+        self.text = text
+        self.color = color
+        self.alpha = 255
+        self.vy = -60
+        self.vx = random.uniform(-20, 20)
+        self.life = 1.2
+        self.max_life = 1.2
+        self.size = size
+        self.font = pygame.font.SysFont("Segoe UI", size, bold=True)
+        
+    def update(self, dt):
+        self.life -= dt
+        self.y += self.vy * dt
+        self.x += self.vx * dt
+        self.alpha = int(255 * (self.life / self.max_life))
+        
+    def draw(self, screen):
+        if self.alpha <= 0:
+            return
+        text_surf = self.font.render(self.text, True, self.color)
+        text_surf.set_alpha(self.alpha)
+        screen.blit(text_surf, (int(self.x) - text_surf.get_width()//2, int(self.y)))
 
 # ── DRAWING ─────────────────────────────────────────────
 def draw_tower(screen, state):
@@ -492,6 +520,7 @@ def main():
                 if dist < 25:
                     e.hp = 0
                     state.tower_hp -= 10
+                    state.floating_texts.append(FloatingText(CENTER_X, CENTER_Y - 20, "-10", (255, 50, 50), 20))
                     if state.tower_hp <= 0:
                         state.tower_hp = 0
                         state.game_over = True
@@ -507,6 +536,9 @@ def main():
                         state.gold += 5 + state.wave
                         for _ in range(8):
                             state.particles.append(Particle(p.target.x, p.target.y, GOLD_COLOR))
+                        state.floating_texts.append(FloatingText(p.target.x, p.target.y, f"+${5+state.wave}", GOLD_COLOR, 22))
+                    else:
+                        state.floating_texts.append(FloatingText(p.target.x, p.target.y, f"-{int(p.damage)}", (255, 80, 80), 18))
                     state.projectiles.remove(p)
             
             # Cleanup
@@ -517,6 +549,12 @@ def main():
                 p.update(dt)
                 if p.life <= 0:
                     state.particles.remove(p)
+            
+            # Update floating texts
+            for ft in state.floating_texts[:]:
+                ft.update(dt)
+                if ft.life <= 0:
+                    state.floating_texts.remove(ft)
         
         # ── RENDER ──
         screen.fill(BG)
@@ -530,6 +568,10 @@ def main():
         # Draw particles
         for p in state.particles:
             p.draw(screen)
+        
+        # Draw floating texts
+        for ft in state.floating_texts:
+            ft.draw(screen)
         
         # Draw enemies
         for e in state.enemies:
