@@ -784,12 +784,66 @@ def main():
                     drops = []
                     continue
                 mx, my = pygame.mouse.get_pos()
-                # Check upgrade buttons
-                for btn_rect, upgrade_fn in upgrade_buttons:
-                    if btn_rect.collidepoint(mx, my):
-                        if upgrade_fn(state):
-                            state.floating_texts.append(FloatingText(mx, my, "UPGRADED!", (100, 255, 100), 20))
-                        break
+                # Check upgrade buttons - recalculate rects fresh on click
+                panel_x = PLAY_AREA_W + 10 if UPGRADE_PANEL_SIDE == "right" else 10
+                panel_y = 10
+                panel_w = 250 if UPGRADE_PANEL_SIDE == "right" else PLAY_AREA_W - 20
+                if UPGRADE_PANEL_SIDE == "bottom":
+                    panel_y = HEIGHT - 150
+                
+                # Upgrade button positions
+                if UPGRADE_PANEL_SIDE == "right":
+                    y = panel_y + 50
+                    btn_h = 45
+                    btn_gap = 8
+                    upgrades = [
+                        ("Damage", state.cost_damage, state.upgrade_damage),
+                        ("Fire Rate", state.cost_speed, state.upgrade_speed),
+                        ("Range", state.cost_range, state.upgrade_range),
+                        ("Multi-shot", state.cost_multi, state.upgrade_multishot),
+                        ("Crit Chance", state.cost_crit_chance, state.upgrade_crit_chance),
+                        ("Crit Mult", state.cost_crit_mult, state.upgrade_crit_mult),
+                        ("Tower HP", state.cost_hp, state.upgrade_hp),
+                    ]
+                    for name, cost, fn in upgrades:
+                        is_maxed = (name == "Multi-shot" and state.multishot >= 4) or \
+                                   (name == "Crit Chance" and state.crit_chance >= 0.5) or \
+                                   (name == "Crit Mult" and state.crit_mult >= 5.0)
+                        if not is_maxed:
+                            rect = pygame.Rect(panel_x + 10, y, panel_w - 20, btn_h)
+                            if rect.collidepoint(mx, my):
+                                if fn(state):
+                                    state.floating_texts.append(FloatingText(mx, my, "UPGRADED!", (100, 255, 100), 20))
+                                break
+                        y += btn_h + btn_gap
+                else:
+                    # Bottom layout
+                    x = panel_x + 10
+                    y = panel_y + 40
+                    btn_w = 130
+                    btn_h = 40
+                    btn_gap = 8
+                    upgrades = [
+                        ("Damage", state.cost_damage, state.upgrade_damage),
+                        ("Fire Rate", state.cost_speed, state.upgrade_speed),
+                        ("Range", state.cost_range, state.upgrade_range),
+                        ("Multi-shot", state.cost_multi, state.upgrade_multishot),
+                        ("Crit Chance", state.cost_crit_chance, state.upgrade_crit_chance),
+                        ("Crit Mult", state.cost_crit_mult, state.upgrade_crit_mult),
+                        ("Tower HP", state.cost_hp, state.upgrade_hp),
+                    ]
+                    for name, cost, fn in upgrades:
+                        is_maxed = (name == "Multi-shot" and state.multishot >= 4) or \
+                                   (name == "Crit Chance" and state.crit_chance >= 0.5) or \
+                                   (name == "Crit Mult" and state.crit_mult >= 5.0)
+                        if not is_maxed:
+                            rect = pygame.Rect(x, y, btn_w, btn_h)
+                            if rect.collidepoint(mx, my):
+                                if fn(state):
+                                    state.floating_texts.append(FloatingText(mx, my, "UPGRADED!", (100, 255, 100), 20))
+                                break
+                        x += btn_w + btn_gap
+                
                 # Check power-up buttons
                 for btn_rect, powerup_fn in powerup_buttons:
                     if btn_rect.collidepoint(mx, my):
