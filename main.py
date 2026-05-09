@@ -97,6 +97,7 @@ class GameState:
             "heal": {"cooldown": 0, "max_cooldown": 20, "ready": True, "icon": "💖"},
             "freeze": {"cooldown": 0, "max_cooldown": 25, "ready": True, "icon": "❄️"},
             "rage": {"cooldown": 0, "max_cooldown": 30, "ready": True, "icon": "🔥"},
+            "vacuum": {"cooldown": 0, "max_cooldown": 30, "ready": True, "icon": "🧲"},
         }
         self.rage_timer = 0  # Rage active duration
         self.frozen_timer = 0  # Freeze active duration
@@ -285,6 +286,35 @@ class GameState:
             self.rage_timer = 8.0  # 8 seconds
             return True
         return False
+
+    def use_vacuum(self, drops):
+        ab = self.abilities["vacuum"]
+        if ab["ready"]:
+            ab["ready"] = False
+            ab["cooldown"] = ab["max_cooldown"]
+            count = 0
+            for drop in drops[:]:
+                if drop.type == "heal":
+                    heal = min(self.tower_max_hp - self.tower_hp, 25)
+                    self.tower_hp += heal
+                    self.floating_texts.append(FloatingText(drop.x, drop.y, f"+{int(heal)} HP", (255, 100, 200), 20))
+                elif drop.type == "gold":
+                    gold = 25 + self.wave * 5
+                    self.gold += gold
+                    self.floating_texts.append(FloatingText(drop.x, drop.y, f"+${gold}", (255, 215, 0), 22))
+                elif drop.type == "damage":
+                    self.damage += 3
+                    self.floating_texts.append(FloatingText(drop.x, drop.y, "+3 DMG!", (255, 100, 100), 20))
+                elif drop.type == "speed":
+                    self.fire_rate += 0.2
+                    self.floating_texts.append(FloatingText(drop.x, drop.y, "+SPD!", (100, 255, 100), 20))
+                elif drop.type == "shield":
+                    self.has_shield = True
+                    self.floating_texts.append(FloatingText(drop.x, drop.y, "SHIELD!", (100, 150, 255), 20))
+                drops.remove(drop)
+                count += 1
+            return count
+        return 0
 
 # ── ENEMY ────────────────────────────────────────────────
 class Enemy:
@@ -631,6 +661,7 @@ def draw_ability_bar(screen, font, state):
         ("2", state.abilities["heal"]),
         ("3", state.abilities["freeze"]),
         ("4", state.abilities["rage"]),
+        ("5", state.abilities["vacuum"]),
     ]
 
     btn_size = 45
@@ -794,6 +825,10 @@ def main():
                     if event.key == pygame.K_4:
                         if state.use_rage():
                             state.floating_texts.append(FloatingText(CENTER_X, CENTER_Y, "RAGE MODE!", (255, 80, 80), 32))
+                    if event.key == pygame.K_5:
+                        count = state.use_vacuum(drops)
+                        if count > 0:
+                            state.floating_texts.append(FloatingText(CENTER_X, CENTER_Y, f"🧲 VACUUM: {count} items!", (255, 100, 255), 28))
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if state.game_over:
                     state.reset()
