@@ -484,6 +484,9 @@ def main():
             state.wave_cooldown -= dt
             if state.wave_cooldown <= 0:
                 state.start_wave()
+        
+        # Main game logic
+        if not state.paused and not state.game_over:
             # Tower shooting
             now = time.time()
             if now - state.last_shot >= state.get_fire_cooldown():
@@ -592,6 +595,28 @@ def main():
         
         # Draw tower
         draw_tower(screen, state)
+        
+        # Draw wave popup
+        if state.wave_popup:
+            popup = state.wave_popup
+            progress = popup["life"] / popup["max_life"]
+            if progress > 0.85:
+                alpha = int(255 * (1 - progress) / 0.15)
+            else:
+                alpha = int(255 * min(1.0, progress / 0.5))
+            
+            popup_font = pygame.font.SysFont("Segoe UI", 48, bold=True)
+            text = popup_font.render(popup["text"], True, (255, 200, 80))
+            text.set_alpha(alpha)
+            x = PLAY_AREA_W // 2 - text.get_width() // 2
+            y = HEIGHT // 2 - 80
+            screen.blit(text, (x, y))
+            
+            sub_font = pygame.font.SysFont("Segoe UI", 20)
+            sub = sub_font.render("INCOMING!", True, (255, 100, 100))
+            sub.set_alpha(alpha)
+            sx = PLAY_AREA_W // 2 - sub.get_width() // 2
+            screen.blit(sub, (sx, y + 55))
         
         # UI
         draw_top_bar(screen, font, state)
