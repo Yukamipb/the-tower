@@ -276,6 +276,9 @@ class GameState:
         self.gold_per_wave = 1.0
         self.c_gkill = 100
         self.c_gwave = 150
+        # Time Warp
+        self.time_warp = 1.0
+        self.c_warp = 300
         # Abilities
         self.abilities = {
             "bomb":   {"cd":0, "max":15, "ready":True, "icon":"💣"},
@@ -400,6 +403,10 @@ class GameState:
     def buy_gwave(self):
         if self.gold >= self.c_gwave and self.gold_per_wave < 3.0:
             self.gold -= self.c_gwave; self.gold_per_wave += 0.3; self.c_gwave = int(self.c_gwave * 1.6); return True
+        return False
+    def buy_warp(self):
+        if self.gold >= self.c_warp and self.time_warp < 3.0:
+            self.gold -= self.c_warp; self.time_warp += 0.5; self.c_warp = int(self.c_warp * 2.0); return True
         return False
     def magnet_delay(self):
         return {0:None, 1:1.0, 2:0.5, 3:0.2, 4:0.0}.get(self.magnet, None)
@@ -594,65 +601,88 @@ def draw_upgrade_tab(screen, font, state, active_tab):
 
     if active_tab == 0:  # OFFENCE
         upgrades = [
-            (f"Damage ({state.damage:.0f})", "+5", state.c_dmg, state.up_dmg),
-            (f"Fire Rate ({state.fire_rate:.1f}/s)", "+0.3", state.c_speed, state.up_speed),
-            (f"Range ({state.range_r:.0f})", "+30", state.c_range, state.up_range),
-            (f"Multi-shot ({state.multishot})", "+1", state.c_multi, state.up_multi),
-            (f"Crit Chance ({state.crit_chance*100:.0f}%)", "+3%", state.c_critc, state.up_critc),
-            (f"Crit Mult ({state.crit_mult:.1f}x)", "+0.3x", state.c_critm, state.up_critm),
+            (f"Damage ({state.damage:.0f})", "+5", state.c_dmg, state.up_dmg, None),
+            (f"Fire Rate ({state.fire_rate:.1f}/s)", "+0.3", state.c_speed, state.up_speed, None),
+            (f"Range ({state.range_r:.0f})", "+30", state.c_range, state.up_range, None),
+            (f"Multi-shot ({state.multishot})", "+1", state.c_multi, state.up_multi, 4),
+            (f"Crit Chance ({state.crit_chance*100:.0f}%)", "+3%", state.c_critc, state.up_critc, 0.5),
+            (f"Crit Mult ({state.crit_mult:.1f}x)", "+0.3x", state.c_critm, state.up_critm, 5.0),
         ]
-        for name, desc, cost, fn in upgrades:
-            is_maxed = ("Multi-shot" in name and state.multishot >= 4) or \
-                       ("Crit Chance" in name and state.crit_chance >= 0.5) or \
-                       ("Crit Mult" in name and state.crit_mult >= 5.0)
+        for name, desc, cost, fn, cap in upgrades:
+            is_maxed = False
+            if cap is not None:
+                if "Multi-shot" in name and state.multishot >= cap:
+                    is_maxed = True
+                elif "Crit Chance" in name and state.crit_chance >= cap:
+                    is_maxed = True
+                elif "Crit Mult" in name and state.crit_mult >= cap:
+                    is_maxed = True
             color = BTN_MAXED if is_maxed else BTN
             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
             pygame.draw.rect(screen, color, rect, border_radius=5)
             pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
             screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-            screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
+            if is_maxed:
+                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
+            else:
+                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
+                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
             if not is_maxed:
                 clickable.append((rect, fn))
             y += row_h
     elif active_tab == 1:  # DEFENCE
         upgrades = [
-            (f"Tower HP ({state.tower_hp:.0f}/{state.tower_max_hp})", "+20", state.c_hp, state.up_hp),
-            (f"Shield", "Active" if state.has_shield else "Buy", 250, state.buy_shield),
+            (f"Tower HP ({state.tower_hp:.0f}/{state.tower_max_hp})", "+20", state.c_hp, state.up_hp, None),
+            (f"Shield", "Active" if state.has_shield else "Buy", 250, state.buy_shield, None),
         ]
-        for name, desc, cost, fn in upgrades:
+        for name, desc, cost, fn, cap in upgrades:
             is_maxed = "Shield" in name and state.has_shield
             color = BTN_MAXED if is_maxed else BTN
             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
             pygame.draw.rect(screen, color, rect, border_radius=5)
             pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
             screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-            screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
+            if is_maxed:
+                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
+            else:
+                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
+                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
             if not is_maxed:
                 clickable.append((rect, fn))
             y += row_h
     else:  # UTILITY
         upgrades = [
-            (f"Gold/Kill ({state.gold_per_kill:.1f}x)", "+0.5x", state.c_gkill, state.buy_gkill),
-            (f"Gold/Wave ({state.gold_per_wave:.1f}x)", "+0.3x", state.c_gwave, state.buy_gwave),
-            (f"Magnet (Lv{state.magnet})", "Lv up", state.magnet_cost, state.buy_magnet),
-            (f"Life Steal (+{state.life_steal})", "+1", 400 + state.life_steal * 300, state.buy_lifesteal),
-            (f"Turret ({len(state.turrets)}/4)", "New", state.c_turret, state.buy_turret),
+            (f"Gold/Kill ({state.gold_per_kill:.1f}x)", "+0.5x", state.c_gkill, state.buy_gkill, 5.0),
+            (f"Gold/Wave ({state.gold_per_wave:.1f}x)", "+0.3x", state.c_gwave, state.buy_gwave, 3.0),
+            (f"Time Warp ({state.time_warp:.1f}x)", "+0.5x", state.c_warp, state.buy_warp, 3.0),
+            (f"Magnet (Lv{state.magnet})", "Lv up", state.magnet_cost, state.buy_magnet, 4),
+            (f"Life Steal (+{state.life_steal})", "+1", 400 + state.life_steal * 300, state.buy_lifesteal, 5),
+            (f"Turret ({len(state.turrets)}/4)", "New", state.c_turret, state.buy_turret, 4),
         ]
-        for name, desc, cost, fn in upgrades:
-            is_maxed = ("Magnet" in name and state.magnet >= 4) or \
-                       ("Turret" in name and len(state.turrets) >= 4) or \
-                       ("Life Steal" in name and state.life_steal >= 5) or \
-                       ("Gold/Kill" in name and state.gold_per_kill >= 5.0) or \
-                       ("Gold/Wave" in name and state.gold_per_wave >= 3.0)
+        for name, desc, cost, fn, cap in upgrades:
+            is_maxed = False
+            if "Magnet" in name and state.magnet >= cap:
+                is_maxed = True
+            elif "Turret" in name and len(state.turrets) >= cap:
+                is_maxed = True
+            elif "Life Steal" in name and state.life_steal >= cap:
+                is_maxed = True
+            elif "Gold/Kill" in name and state.gold_per_kill >= cap:
+                is_maxed = True
+            elif "Gold/Wave" in name and state.gold_per_wave >= cap:
+                is_maxed = True
+            elif "Time Warp" in name and state.time_warp >= cap:
+                is_maxed = True
             color = BTN_MAXED if is_maxed else BTN
             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
             pygame.draw.rect(screen, color, rect, border_radius=5)
             pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
             screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-            screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
+            if is_maxed:
+                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
+            else:
+                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
+                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
             if not is_maxed:
                 clickable.append((rect, fn))
             y += row_h
@@ -1116,7 +1146,7 @@ def main():
             text = popup_font.render(popup["text"], True, (255, 200, 80))
             text.set_alpha(alpha)
             x = WIDTH // 2 - text.get_width() // 2
-            y = HEIGHT // 2 - 80
+            y = HEIGHT // 2 - 160
             screen.blit(text, (x + shake_x, y + shake_y))
             sub_font = pygame.font.SysFont("Segoe UI", 20)
             sub = sub_font.render("BOSS INCOMING!" if state.boss_active else "INCOMING!", True, (255, 100, 100))
@@ -1221,65 +1251,88 @@ def draw_upgrade_tab(screen, font, state, active_tab):
 
     if active_tab == 0:  # OFFENCE
         upgrades = [
-            (f"Damage ({state.damage:.0f})", "+5", state.c_dmg, state.up_dmg),
-            (f"Fire Rate ({state.fire_rate:.1f}/s)", "+0.3", state.c_speed, state.up_speed),
-            (f"Range ({state.range_r:.0f})", "+30", state.c_range, state.up_range),
-            (f"Multi-shot ({state.multishot})", "+1", state.c_multi, state.up_multi),
-            (f"Crit Chance ({state.crit_chance*100:.0f}%)", "+3%", state.c_critc, state.up_critc),
-            (f"Crit Mult ({state.crit_mult:.1f}x)", "+0.3x", state.c_critm, state.up_critm),
+            (f"Damage ({state.damage:.0f})", "+5", state.c_dmg, state.up_dmg, None),
+            (f"Fire Rate ({state.fire_rate:.1f}/s)", "+0.3", state.c_speed, state.up_speed, None),
+            (f"Range ({state.range_r:.0f})", "+30", state.c_range, state.up_range, None),
+            (f"Multi-shot ({state.multishot})", "+1", state.c_multi, state.up_multi, 4),
+            (f"Crit Chance ({state.crit_chance*100:.0f}%)", "+3%", state.c_critc, state.up_critc, 0.5),
+            (f"Crit Mult ({state.crit_mult:.1f}x)", "+0.3x", state.c_critm, state.up_critm, 5.0),
         ]
-        for name, desc, cost, fn in upgrades:
-            is_maxed = ("Multi-shot" in name and state.multishot >= 4) or \
-                       ("Crit Chance" in name and state.crit_chance >= 0.5) or \
-                       ("Crit Mult" in name and state.crit_mult >= 5.0)
+        for name, desc, cost, fn, cap in upgrades:
+            is_maxed = False
+            if cap is not None:
+                if "Multi-shot" in name and state.multishot >= cap:
+                    is_maxed = True
+                elif "Crit Chance" in name and state.crit_chance >= cap:
+                    is_maxed = True
+                elif "Crit Mult" in name and state.crit_mult >= cap:
+                    is_maxed = True
             color = BTN_MAXED if is_maxed else BTN
             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
             pygame.draw.rect(screen, color, rect, border_radius=5)
             pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
             screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-            screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
+            if is_maxed:
+                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
+            else:
+                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
+                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
             if not is_maxed:
                 clickable.append((rect, fn))
             y += row_h
     elif active_tab == 1:  # DEFENCE
         upgrades = [
-            (f"Tower HP ({state.tower_hp:.0f}/{state.tower_max_hp})", "+20", state.c_hp, state.up_hp),
-            (f"Shield", "Active" if state.has_shield else "Buy", 250, state.buy_shield),
+            (f"Tower HP ({state.tower_hp:.0f}/{state.tower_max_hp})", "+20", state.c_hp, state.up_hp, None),
+            (f"Shield", "Active" if state.has_shield else "Buy", 250, state.buy_shield, None),
         ]
-        for name, desc, cost, fn in upgrades:
+        for name, desc, cost, fn, cap in upgrades:
             is_maxed = "Shield" in name and state.has_shield
             color = BTN_MAXED if is_maxed else BTN
             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
             pygame.draw.rect(screen, color, rect, border_radius=5)
             pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
             screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-            screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
+            if is_maxed:
+                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
+            else:
+                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
+                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
             if not is_maxed:
                 clickable.append((rect, fn))
             y += row_h
     else:  # UTILITY
         upgrades = [
-            (f"Gold/Kill ({state.gold_per_kill:.1f}x)", "+0.5x", state.c_gkill, state.buy_gkill),
-            (f"Gold/Wave ({state.gold_per_wave:.1f}x)", "+0.3x", state.c_gwave, state.buy_gwave),
-            (f"Magnet (Lv{state.magnet})", "Lv up", state.magnet_cost, state.buy_magnet),
-            (f"Life Steal (+{state.life_steal})", "+1", 400 + state.life_steal * 300, state.buy_lifesteal),
-            (f"Turret ({len(state.turrets)}/4)", "New", state.c_turret, state.buy_turret),
+            (f"Gold/Kill ({state.gold_per_kill:.1f}x)", "+0.5x", state.c_gkill, state.buy_gkill, 5.0),
+            (f"Gold/Wave ({state.gold_per_wave:.1f}x)", "+0.3x", state.c_gwave, state.buy_gwave, 3.0),
+            (f"Time Warp ({state.time_warp:.1f}x)", "+0.5x", state.c_warp, state.buy_warp, 3.0),
+            (f"Magnet (Lv{state.magnet})", "Lv up", state.magnet_cost, state.buy_magnet, 4),
+            (f"Life Steal (+{state.life_steal})", "+1", 400 + state.life_steal * 300, state.buy_lifesteal, 5),
+            (f"Turret ({len(state.turrets)}/4)", "New", state.c_turret, state.buy_turret, 4),
         ]
-        for name, desc, cost, fn in upgrades:
-            is_maxed = ("Magnet" in name and state.magnet >= 4) or \
-                       ("Turret" in name and len(state.turrets) >= 4) or \
-                       ("Life Steal" in name and state.life_steal >= 5) or \
-                       ("Gold/Kill" in name and state.gold_per_kill >= 5.0) or \
-                       ("Gold/Wave" in name and state.gold_per_wave >= 3.0)
+        for name, desc, cost, fn, cap in upgrades:
+            is_maxed = False
+            if "Magnet" in name and state.magnet >= cap:
+                is_maxed = True
+            elif "Turret" in name and len(state.turrets) >= cap:
+                is_maxed = True
+            elif "Life Steal" in name and state.life_steal >= cap:
+                is_maxed = True
+            elif "Gold/Kill" in name and state.gold_per_kill >= cap:
+                is_maxed = True
+            elif "Gold/Wave" in name and state.gold_per_wave >= cap:
+                is_maxed = True
+            elif "Time Warp" in name and state.time_warp >= cap:
+                is_maxed = True
             color = BTN_MAXED if is_maxed else BTN
             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
             pygame.draw.rect(screen, color, rect, border_radius=5)
             pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
             screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-            screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
+            if is_maxed:
+                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
+            else:
+                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
+                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
             if not is_maxed:
                 clickable.append((rect, fn))
             y += row_h
@@ -1743,7 +1796,7 @@ def main():
             text = popup_font.render(popup["text"], True, (255, 200, 80))
             text.set_alpha(alpha)
             x = WIDTH // 2 - text.get_width() // 2
-            y = HEIGHT // 2 - 80
+            y = HEIGHT // 2 - 160
             screen.blit(text, (x + shake_x, y + shake_y))
             sub_font = pygame.font.SysFont("Segoe UI", 20)
             sub = sub_font.render("BOSS INCOMING!" if state.boss_active else "INCOMING!", True, (255, 100, 100))
