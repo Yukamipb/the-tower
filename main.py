@@ -351,33 +351,31 @@ def draw_top_bar(screen, font, state):
     pygame.draw.rect(screen, (20, 25, 40), (0, 0, bar_w, bar_h))
     pygame.draw.line(screen, PANEL_BORDER, (0, bar_h), (bar_w, bar_h), 2)
     
-    # Gold
-    gold_text = font.render(f"💰 {state.gold}", True, GOLD_COLOR)
-    screen.blit(gold_text, (15, 12))
+    # Left: Gold + Wave number (stacked or side by side compact)
+    gold_text = font.render(f"💰{state.gold}", True, GOLD_COLOR)
+    screen.blit(gold_text, (15, 8))
     
-    # Wave
     wave_text = font.render(f"Wave {state.wave}", True, TEXT_COLOR)
-    screen.blit(wave_text, (200, 12))
+    screen.blit(wave_text, (15, 26))
     
-    # Tower HP bar
+    # Center: Tower HP bar
     hp_pct = state.tower_hp / state.tower_max_hp
-    bar_w = 200
-    bar_h = 18
-    bar_x = 350
-    bar_y = 14
-    pygame.draw.rect(screen, HP_BAR_BG, (bar_x, bar_y, bar_w, bar_h))
+    hp_bar_w = 180
+    hp_bar_h = 18
+    hp_bar_x = bar_w // 2 - hp_bar_w // 2
+    hp_bar_y = 14
+    pygame.draw.rect(screen, HP_BAR_BG, (hp_bar_x, hp_bar_y, hp_bar_w, hp_bar_h))
     hp_color = HP_BAR_RED if hp_pct < 0.3 else HP_BAR_FG
-    pygame.draw.rect(screen, hp_color, (bar_x, bar_y, int(bar_w * hp_pct), bar_h))
-    hp_text = font.render(f"Tower HP: {int(state.tower_hp)}/{state.tower_max_hp}", True, TEXT_COLOR)
-    screen.blit(hp_text, (bar_x + bar_w//2 - hp_text.get_width()//2, bar_y - 1))
+    pygame.draw.rect(screen, hp_color, (hp_bar_x, hp_bar_y, int(hp_bar_w * hp_pct), hp_bar_h))
+    hp_text = font.render(f"{int(state.tower_hp)}/{state.tower_max_hp}", True, TEXT_COLOR)
+    screen.blit(hp_text, (hp_bar_x + hp_bar_w//2 - hp_text.get_width()//2, hp_bar_y - 1))
     
-    # Wave status (positioned before upgrade panel)
+    # Right: Wave status (before panel edge)
     if state.wave_active:
-        status = font.render("⚔️ WAVE ACTIVE", True, (255, 100, 100))
+        status = font.render("⚔️ ACTIVE", True, (255, 100, 100))
     else:
-        status = font.render("SPACE = next wave", True, (100, 255, 100))
-    # Right-align before panel edge
-    status_x = bar_w - status.get_width() - 15
+        status = font.render("SPACE▶", True, (100, 255, 100))
+    status_x = bar_w - status.get_width() - 20
     screen.blit(status, (status_x, 14))
 
 def spawn_enemy(state):
