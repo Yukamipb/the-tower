@@ -450,6 +450,7 @@ def main():
     font_sm = pygame.font.SysFont("Segoe UI", 14)
     
     state = GameState()
+    upgrade_buttons = []  # Stores clickable upgrade button rects
     
     running = True
     while running:
