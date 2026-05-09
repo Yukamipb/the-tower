@@ -812,7 +812,7 @@ def main():
                         if not is_maxed:
                             rect = pygame.Rect(panel_x + 10, y, panel_w - 20, btn_h)
                             if rect.collidepoint(mx, my):
-                                if fn(state):
+                                if fn():
                                     state.floating_texts.append(FloatingText(mx, my, "UPGRADED!", (100, 255, 100), 20))
                                 break
                         y += btn_h + btn_gap
@@ -839,7 +839,7 @@ def main():
                         if not is_maxed:
                             rect = pygame.Rect(x, y, btn_w, btn_h)
                             if rect.collidepoint(mx, my):
-                                if fn(state):
+                                if fn():
                                     state.floating_texts.append(FloatingText(mx, my, "UPGRADED!", (100, 255, 100), 20))
                                 break
                         x += btn_w + btn_gap
@@ -847,7 +847,7 @@ def main():
                 # Check power-up buttons
                 for btn_rect, powerup_fn in powerup_buttons:
                     if btn_rect.collidepoint(mx, my):
-                        if powerup_fn(state):
+                        if powerup_fn():
                             state.floating_texts.append(FloatingText(mx, my, "POWER UP!", (255, 100, 255), 20))
                         break
                 # Check drops
