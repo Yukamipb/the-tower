@@ -88,6 +88,8 @@ class GameState:
         self.life_steal = 0          # HP healed per enemy kill
         self.pierce_count = 0       # Projectiles pierce through N extra enemies
         self.has_shield = False      # Absorb next tower hit
+        self.magnet_level = 0  # 0=off, 1=1s delay, 2=0.5s, 3=0.2s, 4=instant
+        self.magnet_cost = 200
 
         # Active abilities (press 1-4 to use, cooldown based)
         self.abilities = {
@@ -227,6 +229,18 @@ class GameState:
             self.has_shield = True
             return True
         return False
+
+    def buy_magnet(self):
+        if self.gold >= self.magnet_cost and self.magnet_level < 4:
+            self.gold -= self.magnet_cost
+            self.magnet_level += 1
+            self.magnet_cost = int(self.magnet_cost * 1.8)
+            return True
+        return False
+
+    def get_magnet_delay(self):
+        delays = {0: None, 1: 1.0, 2: 0.5, 3: 0.2, 4: 0.0}
+        return delays.get(self.magnet_level, None)
 
     # ── ACTIVE ABILITIES ───────────────────────────
     def use_bomb(self):
@@ -403,6 +417,7 @@ class PowerUpDrop:
         self.type = powerup_type  # "damage", "speed", "heal", "gold", "shield"
         self.life = 8.0  # Disappears after 8 seconds
         self.radius = 12
+        self.time_on_ground = 0.0  # For magnet delay
 
     def update(self, dt):
         self.life -= dt
@@ -572,6 +587,7 @@ def draw_powerup_panel(screen, font, state):
         ("Life Steal", f"+{state.life_steal}", 400 + state.life_steal * 300, state.buy_life_steal, state.life_steal < 5),
         ("Pierce", f"+{state.pierce_count}", 500 + state.pierce_count * 400, state.buy_pierce, state.pierce_count < 3),
         ("Shield", "Active" if state.has_shield else "Buy", 250, state.buy_shield, not state.has_shield),
+        ("Magnet", f"Lv{state.magnet_level}", state.magnet_cost, state.buy_magnet, state.magnet_level < 4),
     ]
 
     x = panel_x + 10
@@ -982,6 +998,41 @@ def main():
             # Cleanup enemies
             state.enemies = [e for e in state.enemies if e.hp > 0]
 
+            # Magnet auto-collect
+            magnet_delay = state.get_magnet_delay()
+            if magnet_delay is not None:
+                for drop in drops[:]:
+                    drop.time_on_ground += dt
+                    if drop.time_on_ground >= magnet_delay:
+                        # Fly toward tower
+                        dx = CENTER_X - drop.x
+                        dy = CENTER_Y - drop.y
+                        dist = math.hypot(dx, dy)
+                        if dist > 0:
+                            speed = 400 if magnet_delay == 0.0 else 200
+                            drop.x += (dx / dist) * speed * dt
+                            drop.y += (dy / dist) * speed * dt
+                        # Collect when close
+                        if dist < 30:
+                            if drop.type == "heal":
+                                heal = min(state.tower_max_hp - state.tower_hp, 25)
+                                state.tower_hp += heal
+                                state.floating_texts.append(FloatingText(drop.x, drop.y, f"+{int(heal)} HP", (255, 100, 200), 20))
+                            elif drop.type == "gold":
+                                gold = 25 + state.wave * 5
+                                state.gold += gold
+                                state.floating_texts.append(FloatingText(drop.x, drop.y, f"+${gold}", GOLD_COLOR, 22))
+                            elif drop.type == "damage":
+                                state.damage += 3
+                                state.floating_texts.append(FloatingText(drop.x, drop.y, "+3 DMG!", (255, 100, 100), 20))
+                            elif drop.type == "speed":
+                                state.fire_rate += 0.2
+                                state.floating_texts.append(FloatingText(drop.x, drop.y, "+SPD!", (100, 255, 100), 20))
+                            elif drop.type == "shield":
+                                state.has_shield = True
+                                state.floating_texts.append(FloatingText(drop.x, drop.y, "SHIELD!", (100, 150, 255), 20))
+                            drops.remove(drop)
+
             # Update drops
             for drop in drops[:]:
                 drop.update(dt)
@@ -1067,7 +1118,7 @@ def main():
         upgrade_buttons = draw_upgrade_panel(screen, font_sm, state)
 
         # Power-up panel (only show if enough gold or have power-ups)
-        if state.gold >= 250 or state.damage_boost > 1.0 or state.fire_rate_boost > 1.0 or state.life_steal > 0 or state.pierce_count > 0 or state.has_shield:
+        if state.gold >= 250 or state.damage_boost > 1.0 or state.fire_rate_boost > 1.0 or state.life_steal > 0 or state.pierce_count > 0 or state.has_shield or state.magnet_level > 0:
             powerup_buttons = draw_powerup_panel(screen, font_sm, state)
         else:
             powerup_buttons = []
