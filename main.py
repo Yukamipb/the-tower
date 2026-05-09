@@ -571,124 +571,6 @@ def draw_tower(screen, state):
         ey = CENTER_Y + math.sin(math.radians(a)) * (r+8)
         pygame.draw.line(screen, TOWER_GUN, (CENTER_X, CENTER_Y), (ex, ey), 4)
 
-def draw_upgrade_tab(screen, font, state, active_tab):
-    # Tab buttons
-    tabs = [("OFFENCE", 0), ("DEFENCE", 1), ("UTILITY", 2)]
-    tab_w = 80
-    tab_x = 750
-    tab_y = 60
-    for name, idx in tabs:
-        color = TAB_OFF if idx == 0 else (TAB_DEF if idx == 1 else TAB_UTL)
-        bg = color if active_tab == idx else (40, 40, 50)
-        rect = pygame.Rect(tab_x, tab_y, tab_w, 28)
-        pygame.draw.rect(screen, bg, rect, border_radius=4)
-        pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=4)
-        t = font.render(name, True, TEXT if active_tab == idx else TEXT_DIM)
-        screen.blit(t, (tab_x + tab_w//2 - t.get_width()//2, tab_y + 5))
-        tab_x += tab_w + 5
-
-    # Panel background
-    panel_x = 750
-    panel_y = 90
-    panel_w = 240
-    panel_h = 400
-    pygame.draw.rect(screen, PANEL_BG, (panel_x, panel_y, panel_w, panel_h), border_radius=8)
-    pygame.draw.rect(screen, PANEL_BDR, (panel_x, panel_y, panel_w, panel_h), 2, border_radius=8)
-
-    clickable = []
-    y = panel_y + 15
-    row_h = 50
-
-    if active_tab == 0:  # OFFENCE
-        upgrades = [
-            (f"Damage ({state.damage:.0f})", "+5", state.c_dmg, state.up_dmg, None),
-            (f"Fire Rate ({state.fire_rate:.1f}/s)", "+0.3", state.c_speed, state.up_speed, None),
-            (f"Range ({state.range_r:.0f})", "+30", state.c_range, state.up_range, None),
-            (f"Multi-shot ({state.multishot})", "+1", state.c_multi, state.up_multi, 4),
-            (f"Crit Chance ({state.crit_chance*100:.0f}%)", "+3%", state.c_critc, state.up_critc, 0.5),
-            (f"Crit Mult ({state.crit_mult:.1f}x)", "+0.3x", state.c_critm, state.up_critm, 5.0),
-        ]
-        for name, desc, cost, fn, cap in upgrades:
-            is_maxed = False
-            if cap is not None:
-                if "Multi-shot" in name and state.multishot >= cap:
-                    is_maxed = True
-                elif "Crit Chance" in name and state.crit_chance >= cap:
-                    is_maxed = True
-                elif "Crit Mult" in name and state.crit_mult >= cap:
-                    is_maxed = True
-            color = BTN_MAXED if is_maxed else BTN
-            rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
-            pygame.draw.rect(screen, color, rect, border_radius=5)
-            pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
-            screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            if is_maxed:
-                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
-            else:
-                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
-            if not is_maxed:
-                clickable.append((rect, fn))
-            y += row_h
-    elif active_tab == 1:  # DEFENCE
-        upgrades = [
-            (f"Tower HP ({state.tower_hp:.0f}/{state.tower_max_hp})", "+20", state.c_hp, state.up_hp, None),
-            (f"Shield", "Active" if state.has_shield else "Buy", 250, state.buy_shield, None),
-        ]
-        for name, desc, cost, fn, cap in upgrades:
-            is_maxed = "Shield" in name and state.has_shield
-            color = BTN_MAXED if is_maxed else BTN
-            rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
-            pygame.draw.rect(screen, color, rect, border_radius=5)
-            pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
-            screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            if is_maxed:
-                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
-            else:
-                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
-            if not is_maxed:
-                clickable.append((rect, fn))
-            y += row_h
-    else:  # UTILITY
-        upgrades = [
-            (f"Gold/Kill ({state.gold_per_kill:.1f}x)", "+0.5x", state.c_gkill, state.buy_gkill, 5.0),
-            (f"Gold/Wave ({state.gold_per_wave:.1f}x)", "+0.3x", state.c_gwave, state.buy_gwave, 3.0),
-            (f"Time Warp ({state.time_warp:.1f}x)", "+0.5x", state.c_warp, state.buy_warp, 3.0),
-            (f"Magnet (Lv{state.magnet})", "Lv up", state.magnet_cost, state.buy_magnet, 4),
-            (f"Life Steal (+{state.life_steal})", "+1", 400 + state.life_steal * 300, state.buy_lifesteal, 5),
-            (f"Turret ({len(state.turrets)}/4)", "New", state.c_turret, state.buy_turret, 4),
-        ]
-        for name, desc, cost, fn, cap in upgrades:
-            is_maxed = False
-            if "Magnet" in name and state.magnet >= cap:
-                is_maxed = True
-            elif "Turret" in name and len(state.turrets) >= cap:
-                is_maxed = True
-            elif "Life Steal" in name and state.life_steal >= cap:
-                is_maxed = True
-            elif "Gold/Kill" in name and state.gold_per_kill >= cap:
-                is_maxed = True
-            elif "Gold/Wave" in name and state.gold_per_wave >= cap:
-                is_maxed = True
-            elif "Time Warp" in name and state.time_warp >= cap:
-                is_maxed = True
-            color = BTN_MAXED if is_maxed else BTN
-            rect = pygame.Rect(panel_x + 10, y, panel_w - 20, row_h - 5)
-            pygame.draw.rect(screen, color, rect, border_radius=5)
-            pygame.draw.rect(screen, PANEL_BDR, rect, 1, border_radius=5)
-            screen.blit(font.render(name, True, TEXT), (panel_x + 18, y + 3))
-            if is_maxed:
-                screen.blit(font.render("MAXED", True, (100, 255, 100)), (panel_x + 18, y + 22))
-            else:
-                cost_color = GOLD if state.gold >= cost else (150, 120, 80)
-                screen.blit(font.render(f"💰{cost}", True, cost_color), (panel_x + 18, y + 22))
-            if not is_maxed:
-                clickable.append((rect, fn))
-            y += row_h
-
-    return clickable
-
 def draw_ability_bar(screen, font, state):
     bar_y = 60
     btn_size = 45
@@ -1014,8 +896,9 @@ def main():
                 if not p.active:
                     state.projectiles.remove(p)
                     continue
+                old_reached = p.target.reached if p.target else True
                 p.update(dt)
-                if p.active and p.target and p.target.hp <= 0 and not p.target.reached:
+                if p.target and p.target.hp <= 0 and not old_reached and p.target.reached:
                     if p.pierce > 0:
                         p.pierce -= 1
                         new_targets = []
@@ -1337,6 +1220,18 @@ def draw_upgrade_tab(screen, font, state, active_tab):
                 clickable.append((rect, fn))
             y += row_h
 
+    # Prestige info at bottom
+    if state.prestige_level > 0:
+        y += 5
+        prestige_color = (255, 200, 100)
+        pygame.draw.line(screen, PANEL_BDR, (panel_x + 10, y), (panel_x + panel_w - 10, y), 1)
+        y += 8
+        screen.blit(font.render(f"PERMANENT (P{state.prestige_level})", True, prestige_color), (panel_x + 18, y))
+        y += 16
+        screen.blit(font.render(f"Dmg: +{int((state.prestige_dmg-1)*100)}%", True, prestige_color), (panel_x + 18, y))
+        y += 14
+        screen.blit(font.render(f"Gold: +{int((state.prestige_gold-1)*100)}%", True, prestige_color), (panel_x + 18, y))
+
     return clickable
 
 def draw_ability_bar(screen, font, state):
@@ -1664,8 +1559,9 @@ def main():
                 if not p.active:
                     state.projectiles.remove(p)
                     continue
+                old_reached = p.target.reached if p.target else True
                 p.update(dt)
-                if p.active and p.target and p.target.hp <= 0 and not p.target.reached:
+                if p.target and p.target.hp <= 0 and not old_reached and p.target.reached:
                     if p.pierce > 0:
                         p.pierce -= 1
                         new_targets = []
