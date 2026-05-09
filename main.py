@@ -1070,7 +1070,7 @@ def main():
 
             # Update particles
             for p in state.particles[:]:
-                p.update(dt, state)
+                p.update(dt)
                 if p.life <= 0:
                     state.particles.remove(p)
 
