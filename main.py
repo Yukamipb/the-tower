@@ -52,6 +52,7 @@ class GameState:
         self.wave_active = False
         self.wave_enemies_remaining = 0
         self.wave_spawn_timer = 0
+        self.wave_cooldown = 0  # Auto-start next wave timer
         self.tower_hp = 100
         self.tower_max_hp = 100
         self.enemies = []
@@ -142,6 +143,7 @@ class GameState:
         self.wave_active = True
         self.wave_enemies_remaining = 10 + self.wave * 3
         self.wave_spawn_timer = 0
+        self.wave_cooldown = 0
         
     def get_enemy_hp(self):
         return 10 + self.wave * 2
@@ -374,7 +376,8 @@ def draw_top_bar(screen, font, state):
     if state.wave_active:
         status = font.render("⚔️ ACTIVE", True, (255, 100, 100))
     else:
-        status = font.render("SPACE▶", True, (100, 255, 100))
+        cd = max(0, state.wave_cooldown)
+        status = font.render(f"Next: {cd:.1f}s", True, (100, 255, 100))
     status_x = bar_w - status.get_width() - 20
     screen.blit(status, (status_x, 14))
 
@@ -445,9 +448,11 @@ def main():
                         upgrade_fn(state)
                         break
         
-        if state.paused or state.game_over:
-            pass
-        else:
+        # Auto-start next wave after cooldown
+        if not state.wave_active and not state.game_over and state.wave_cooldown > 0:
+            state.wave_cooldown -= dt
+            if state.wave_cooldown <= 0:
+                state.start_wave()
             # Tower shooting
             now = time.time()
             if now - state.last_shot >= state.get_fire_cooldown():
@@ -479,6 +484,7 @@ def main():
                     state.wave_active = False
                     state.wave += 1
                     state.gold += 50 + state.wave * 10
+                    state.wave_cooldown = 3.0  # 3 seconds to next wave
             
             # Update enemies
             for e in state.enemies[:]:
