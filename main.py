@@ -52,7 +52,8 @@ class GameState:
         self.wave_active = False
         self.wave_enemies_remaining = 0
         self.wave_spawn_timer = 0
-        self.wave_cooldown = 0  # Auto-start next wave timer
+        self.wave_cooldown = 0
+        self.wave_popup = None  # Auto-start next wave timer
         self.tower_hp = 100
         self.tower_max_hp = 100
         self.enemies = []
@@ -145,6 +146,7 @@ class GameState:
         self.wave_enemies_remaining = 10 + self.wave * 3
         self.wave_spawn_timer = 0
         self.wave_cooldown = 0
+        self.wave_popup = {"text": f"WAVE {self.wave}", "life": 2.0, "max_life": 2.0}
         
     def get_enemy_hp(self):
         return 10 + self.wave * 2
@@ -556,6 +558,12 @@ def main():
                 ft.update(dt)
                 if ft.life <= 0:
                     state.floating_texts.remove(ft)
+            
+            # Update wave popup
+            if state.wave_popup:
+                state.wave_popup["life"] -= dt
+                if state.wave_popup["life"] <= 0:
+                    state.wave_popup = None
         
         # ── RENDER ──
         screen.fill(BG)
