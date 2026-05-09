@@ -440,7 +440,10 @@ def main():
                     continue
                 mx, my = pygame.mouse.get_pos()
                 # Check upgrade buttons
-                # TODO: Add click detection for upgrade buttons
+                for btn_rect, upgrade_fn in upgrade_buttons:
+                    if btn_rect.collidepoint(mx, my):
+                        upgrade_fn(state)
+                        break
         
         if state.paused or state.game_over:
             pass
