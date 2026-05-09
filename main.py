@@ -371,12 +371,14 @@ def draw_top_bar(screen, font, state):
     hp_text = font.render(f"Tower HP: {int(state.tower_hp)}/{state.tower_max_hp}", True, TEXT_COLOR)
     screen.blit(hp_text, (bar_x + bar_w//2 - hp_text.get_width()//2, bar_y - 1))
     
-    # Wave status
+    # Wave status (positioned before upgrade panel)
     if state.wave_active:
-        status = font.render("⚔️ WAVE IN PROGRESS", True, (255, 100, 100))
+        status = font.render("⚔️ WAVE ACTIVE", True, (255, 100, 100))
     else:
-        status = font.render("✅ WAVE CLEAR - Press SPACE", True, (100, 255, 100))
-    screen.blit(status, (600, 12))
+        status = font.render("SPACE = next wave", True, (100, 255, 100))
+    # Right-align before panel edge
+    status_x = bar_w - status.get_width() - 15
+    screen.blit(status, (status_x, 14))
 
 def spawn_enemy(state):
     edge = random.choice(["top", "bottom", "left", "right"])
