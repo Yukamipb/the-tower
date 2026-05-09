@@ -480,13 +480,13 @@ def draw_upgrade_panel(screen, font, state):
     screen.blit(title, (panel_x + panel_w//2 - title.get_width()//2, panel_y + 10))
 
     upgrades = [
-        ("Damage", f"+5 DMG", state.cost_damage, state.upgrade_damage),
-        ("Fire Rate", f"+0.3/s", state.cost_speed, state.upgrade_speed),
-        ("Range", f"+30", state.cost_range, state.upgrade_range),
-        ("Multi-shot", f"+1 shot", state.cost_multi, state.upgrade_multishot),
-        ("Crit Chance", f"+3%", state.cost_crit_chance, state.upgrade_crit_chance),
-        ("Crit Mult", f"+0.3x", state.cost_crit_mult, state.upgrade_crit_mult),
-        ("Tower HP", f"Repair", state.cost_hp, state.upgrade_hp),
+        (f"Damage ({state.damage})", f"+5", state.cost_damage, state.upgrade_damage),
+        (f"Fire Rate ({state.fire_rate:.1f}/s)", f"+0.3", state.cost_speed, state.upgrade_speed),
+        (f"Range ({state.range_radius:.0f})", f"+30", state.cost_range, state.upgrade_range),
+        (f"Multi-shot ({state.multishot})", f"+1", state.cost_multi, state.upgrade_multishot),
+        (f"Crit Chance ({state.crit_chance*100:.0f}%)", f"+3%", state.cost_crit_chance, state.upgrade_crit_chance),
+        (f"Crit Mult ({state.crit_mult:.1f}x)", f"+0.3x", state.cost_crit_mult, state.upgrade_crit_mult),
+        (f"Tower HP ({state.tower_hp:.0f}/{state.tower_max_hp})", f"+20", state.cost_hp, state.upgrade_hp),
     ]
 
     if UPGRADE_PANEL_SIDE == "right":
